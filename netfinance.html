@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NetFinance | Controle Financeiro</title>
+    
+    <!-- Configurações PWA (Progressive Web App) -->
+    <meta name="theme-color" content="#141414">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NetFinance">
+    
+    <!-- Manifesto Embutido (Data URI) para comportamento de App -->
+    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22NetFinance%20App%22%2C%22short_name%22%3A%22NetFinance%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23141414%22%2C%22theme_color%22%3A%22%23E50914%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fcdn-icons-png.flaticon.com%2F512%2F10543%2F10543265.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D'>
+    
+    <!-- Ícone para iOS -->
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/10543/10543265.png">
+
+    <!-- Bibliotecas Externas (CDNs) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Fonte Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Configurações Globais e Variáveis de Cores (Estilo Netflix/Dark) */
+        :root {
+            --bg-color: #141414;
+            --card-bg: rgba(30, 30, 30, 0.7);
+            --primary-red: #E50914;
+            --hover-red: #b2070f;
+            --accent-green: #46d369;
+            --text-main: #ffffff;
+            --text-secondary: #b3b3b3;
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow-x: hidden;
+            /* Previne o bounce effect no iOS */
+            overscroll-behavior-y: none;
+        }
+
+        /* Área segura para iPhones com Notch */
+        .safe-area-pt {
+            padding-top: env(safe-area-inset-top);
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: var(--glass-border);
+            border-radius: 8px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-panel:hover {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #000; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #333; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555; 
+        }
+
+        /* Inputs Personalizados */
+        .netflix-input {
+            background-color: #333;
+            border: none;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .netflix-input:focus {
+            background-color: #454545;
+            outline: 2px solid white; 
+            outline-offset: 2px;
+        }
+
+        /* Botões */
+        .btn-netflix {
+            background-color: var(--primary-red);
+            color: white;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        .btn-netflix:hover {
+            background-color: var(--hover-red);
+        }
+
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        /* Tabela Transparente */
+        .table-row {
+            border-bottom: 1px solid #333;
+            transition: background 0.2s;
+        }
+        .table-row:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        /* Responsividade Gráficos */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Modal de Instalação */
+        #install-modal {
+            backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col safe-area-pt">
+
+    <!-- Navegação -->
+    <nav class="fixed w-full z-50 bg-black/80 backdrop-blur-md border-b border-white/10 top-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-2">
+                    <!-- Ícone substituído por FontAwesome para consistência -->
+                    <i class="fas fa-chart-line text-[#E50914] text-2xl"></i>
+                    <span class="text-2xl sm:text-3xl font-bold text-[#E50914] tracking-tighter">NETFINANCE</span>
+                </div>
+                <div class="flex items-center gap-4">
+                    <button onclick="app.showInstallHelp()" class="text-sm text-gray-300 hover:text-white transition flex items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full">
+                        <i class="fas fa-download"></i> <span class="hidden sm:inline">Instalar App</span>
+                    </button>
+                    <button onclick="app.exportToCSV()" class="text-gray-300 hover:text-white transition" title="Exportar CSV">
+                        <i class="fas fa-file-export"></i>
+                    </button>
+                    <button onclick="app.resetData()" class="text-gray-300 hover:text-red-500 transition" title="Resetar Dados">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        
+        <!-- Frase Motivacional -->
+        <div class="mb-8 animate-fade-in mt-2">
+            <h1 class="text-3xl sm:text-4xl font-bold text-white mb-2">Painel Financeiro</h1>
+            <p id="motivational-quote" class="text-gray-400 text-sm sm:text-lg italic"></p>
+        </div>
+
+        <!-- Dashboard Cards (KPIs) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-fade-in" style="animation-delay: 0.1s;">
+            <!-- Saldo -->
+            <div class="glass-panel p-6 flex flex-col justify-between relative overflow-hidden group">
+                <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                    <i class="fas fa-wallet fa-4x text-white"></i>
+                </div>
+                <p class="text-gray-400 text-sm uppercase tracking-wider font-semibold">Saldo Atual</p>
+                <h2 id="display-balance" class="text-3xl font-bold mt-2 text-white">R$ 0,00</h2>
+                <div class="mt-4 h-1 w-full bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-white w-full"></div>
+                </div>
+            </div>
+
+            <!-- Receitas -->
+            <div class="glass-panel p-6 flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                    <p class="text-gray-400 text-sm uppercase tracking-wider font-semibold">Receitas</p>
+                    <i class="fas fa-arrow-up text-[#46d369]"></i>
+                </div>
+                <h2 id="display-income" class="text-2xl font-bold mt-2 text-[#46d369]">R$ 0,00</h2>
+            </div>
+
+            <!-- Despesas -->
+            <div class="glass-panel p-6 flex flex-col justify-between">
+                <div class="flex items-center justify-between">
+                    <p class="text-gray-400 text-sm uppercase tracking-wider font-semibold">Despesas</p>
+                    <i class="fas fa-arrow-down text-[#E50914]"></i>
+                </div>
+                <h2 id="display-expense" class="text-2xl font-bold mt-2 text-[#E50914]">R$ 0,00</h2>
+            </div>
+
+            <!-- Economia -->
+            <div class="glass-panel p-6 flex flex-col justify-between">
+                <p class="text-gray-400 text-sm uppercase tracking-wider font-semibold">Taxa de Economia</p>
+                <h2 id="display-savings-rate" class="text-2xl font-bold mt-2 text-blue-400">0%</h2>
+                <p class="text-xs text-gray-500 mt-1">Meta recomendada: 20%</p>
+            </div>
+        </div>
+
+        <!-- Grid Principal: Formulário e Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+            
+            <!-- Coluna Esquerda: Formulário de Adição -->
+            <div class="lg:col-span-1 space-y-8 animate-fade-in" style="animation-delay: 0.2s;">
+                <div class="glass-panel p-6">
+                    <h3 class="text-xl font-bold mb-6 flex items-center gap-2">
+                        <i class="fas fa-plus-circle text-[#E50914]"></i> Nova Movimentação
+                    </h3>
+                    
+                    <form id="transaction-form" class="space-y-4">
+                        <!-- Tipo -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="expense" class="peer sr-only" checked>
+                                <div class="p-3 text-center border border-gray-600 rounded-md peer-checked:bg-[#E50914] peer-checked:border-[#E50914] peer-checked:text-white text-gray-400 transition-all hover:bg-gray-800">
+                                    Despesa
+                                </div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="income" class="peer sr-only">
+                                <div class="p-3 text-center border border-gray-600 rounded-md peer-checked:bg-[#46d369] peer-checked:border-[#46d369] peer-checked:text-white text-gray-400 transition-all hover:bg-gray-800">
+                                    Receita
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Descrição -->
+                        <div>
+                            <input type="text" id="desc" placeholder="Descrição (ex: Supermercado)" class="netflix-input w-full" required>
+                        </div>
+
+                        <!-- Valor e Data -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" id="amount" placeholder="Valor (R$)" step="0.01" class="netflix-input w-full" required>
+                            <input type="date" id="date" class="netflix-input w-full text-gray-400" required>
+                        </div>
+
+                        <!-- Categoria -->
+                        <div>
+                            <select id="category" class="netflix-input w-full cursor-pointer appearance-none">
+                                <option value="Alimentação">🍔 Alimentação</option>
+                                <option value="Moradia">🏠 Moradia</option>
+                                <option value="Transporte">🚗 Transporte</option>
+                                <option value="Lazer">🍿 Lazer</option>
+                                <option value="Saúde">💊 Saúde</option>
+                                <option value="Educação">📚 Educação</option>
+                                <option value="Salário">💰 Salário</option>
+                                <option value="Investimentos">📈 Investimentos</option>
+                                <option value="Outros">⚙️ Outros</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn-netflix w-full py-3 text-lg shadow-lg transform hover:scale-[1.02] transition-transform">
+                            Adicionar
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Orçamento / Limites -->
+                <div class="glass-panel p-6">
+                    <h3 class="text-lg font-bold mb-4">Orçamento Mensal (Top Categorias)</h3>
+                    <div id="budget-bars" class="space-y-4">
+                        <!-- Barras serão injetadas via JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna Direita: Gráficos -->
+            <div class="lg:col-span-2 space-y-8 animate-fade-in" style="animation-delay: 0.3s;">
+                <!-- Gráfico de Linha (Evolução) -->
+                <div class="glass-panel p-6">
+                    <h3 class="text-lg font-bold mb-4 text-gray-300">Fluxo de Caixa (Últimos 6 meses)</h3>
+                    <div class="chart-container" style="height: 250px;">
+                        <canvas id="lineChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Gráfico de Pizza (Categorias) -->
+                    <div class="glass-panel p-6">
+                        <h3 class="text-lg font-bold mb-4 text-gray-300">Gastos por Categoria</h3>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+                    <!-- Resumo -->
+                    <div class="glass-panel p-6 flex flex-col justify-center items-center text-center">
+                        <i class="fas fa-lightbulb text-yellow-500 text-3xl mb-4"></i>
+                        <h4 class="text-white font-bold text-lg">Regra 50/30/20</h4>
+                        <p class="text-sm text-gray-400 mt-2">
+                            Mantenha 50% para necessidades, 30% para desejos e 20% para objetivos financeiros.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Histórico -->
+        <div class="glass-panel p-6 animate-fade-in" style="animation-delay: 0.4s;">
+            <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+                <h3 class="text-xl font-bold">Histórico de Transações</h3>
+                <div class="flex gap-2">
+                    <select id="filter-category" class="netflix-input py-2 px-4 text-sm" onchange="app.renderHistory()">
+                        <option value="all">Todas as Categorias</option>
+                        <option value="Alimentação">Alimentação</option>
+                        <option value="Moradia">Moradia</option>
+                        <option value="Transporte">Transporte</option>
+                        <option value="Lazer">Lazer</option>
+                        <option value="Saúde">Saúde</option>
+                        <option value="Educação">Educação</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-gray-400 border-b border-gray-700 text-sm uppercase">
+                            <th class="p-3">Data</th>
+                            <th class="p-3">Descrição</th>
+                            <th class="p-3">Categoria</th>
+                            <th class="p-3 text-right">Valor</th>
+                            <th class="p-3 text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-list" class="text-sm text-gray-200">
+                        <!-- Linhas serão injetadas via JS -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Estado Vazio -->
+            <div id="empty-state" class="hidden py-10 text-center text-gray-500">
+                <i class="fas fa-ghost text-4xl mb-3 opacity-50"></i>
+                <p>Nenhuma transação encontrada.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal de Ajuda de Instalação -->
+    <div id="install-modal" class="fixed inset-0 bg-black/80 z-[100] hidden items-center justify-center p-4">
+        <div class="bg-[#1e1e1e] border border-gray-700 rounded-lg p-6 max-w-md w-full relative shadow-2xl">
+            <button onclick="document.getElementById('install-modal').classList.add('hidden'); document.getElementById('install-modal').classList.remove('flex')" class="absolute top-4 right-4 text-gray-400 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            
+            <div class="text-center mb-6">
+                <i class="fas fa-mobile-alt text-4xl text-[#E50914] mb-3"></i>
+                <h3 class="text-xl font-bold text-white">Instalar NetFinance</h3>
+                <p class="text-gray-400 text-sm mt-2">Adicione à sua tela inicial para usar como um App nativo.</p>
+            </div>
+
+            <div class="space-y-4 text-sm text-gray-300">
+                <div class="flex items-start gap-3 p-3 bg-black/30 rounded">
+                    <i class="fab fa-apple text-xl"></i>
+                    <div>
+                        <strong class="text-white block">iPhone / iPad</strong>
+                        1. Toque no botão <strong>Compartilhar</strong> <i class="fas fa-share-square"></i><br>
+                        2. Role para baixo e selecione <strong>Adicionar à Tela de Início</strong>
+                    </div>
+                </div>
+
+                <div class="flex items-start gap-3 p-3 bg-black/30 rounded">
+                    <i class="fab fa-android text-xl"></i>
+                    <div>
+                        <strong class="text-white block">Android (Chrome)</strong>
+                        1. Toque nos três pontinhos no topo <i class="fas fa-ellipsis-v"></i><br>
+                        2. Selecione <strong>Adicionar à tela inicial</strong> ou <strong>Instalar aplicativo</strong>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="document.getElementById('install-modal').classList.add('hidden'); document.getElementById('install-modal').classList.remove('flex')" class="mt-6 w-full btn-netflix py-2">
+                Entendi
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript da Aplicação -->
+    <script>
+        // --- Módulo de Dados e Estado ---
+        const app = {
+            data: {
+                transactions: [],
+                currencyFormatter: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }),
+                charts: {
+                    pie: null,
+                    line: null
+                }
+            },
+
+            // Frases Motivacionais
+            quotes: [
+                "“Cuidado com as pequenas despesas; um pequeno vazamento afundará um grande navio.” – Benjamin Franklin",
+                "“Não economize o que sobra depois de gastar, mas gaste o que sobra depois de economizar.” – Warren Buffett",
+                "“O hábito de poupar é uma educação em si mesmo.”",
+                "“Controle seu dinheiro ou ele controlará você.”",
+                "“Investir em conhecimento rende sempre os melhores juros.” – Benjamin Franklin",
+                "“Dinheiro é um excelente servo, mas um péssimo mestre.”"
+            ],
+
+            init() {
+                // Carregar dados
+                const saved = localStorage.getItem('netfinance_transactions');
+                if (saved) {
+                    this.data.transactions = JSON.parse(saved);
+                } else {
+                    // Dados iniciais de exemplo
+                    this.data.transactions = [
+                        { id: 1, desc: 'Salário Mensal', amount: 5000, type: 'income', category: 'Salário', date: new Date().toISOString().split('T')[0] },
+                        { id: 2, desc: 'Aluguel', amount: 1500, type: 'expense', category: 'Moradia', date: new Date().toISOString().split('T')[0] },
+                        { id: 3, desc: 'Supermercado', amount: 600, type: 'expense', category: 'Alimentação', date: new Date().toISOString().split('T')[0] }
+                    ];
+                    this.saveData();
+                }
+
+                // Configurar data padrão no input
+                document.getElementById('date').valueAsDate = new Date();
+
+                // Exibir frase aleatória
+                document.getElementById('motivational-quote').innerText = this.quotes[Math.floor(Math.random() * this.quotes.length)];
+
+                // Listeners
+                document.getElementById('transaction-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.addTransaction();
+                });
+
+                // Renderizar tudo
+                this.updateUI();
+
+                // Verificar se está em modo standalone (App instalado)
+                if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+                    console.log('Running in standalone mode');
+                    // Opcional: Ocultar botão de instalar se já estiver instalado
+                }
+            },
+
+            showInstallHelp() {
+                const modal = document.getElementById('install-modal');
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            },
+
+            saveData() {
+                localStorage.setItem('netfinance_transactions', JSON.stringify(this.data.transactions));
+            },
+
+            addTransaction() {
+                const desc = document.getElementById('desc').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                const date = document.getElementById('date').value;
+                const category = document.getElementById('category').value;
+                const type = document.querySelector('input[name="type"]:checked').value;
+
+                if (!desc || isNaN(amount) || amount <= 0 || !date) {
+                    alert("Por favor, preencha todos os campos corretamente.");
+                    return;
+                }
+
+                const transaction = {
+                    id: Date.now(),
+                    desc,
+                    amount,
+                    date,
+                    category,
+                    type
+                };
+
+                this.data.transactions.push(transaction);
+                this.saveData();
+                this.updateUI();
+                
+                // Reset form visualmente
+                document.getElementById('desc').value = '';
+                document.getElementById('amount').value = '';
+                
+                // Feedback visual simples
+                const btn = document.querySelector('button[type="submit"]');
+                const originalText = btn.innerText;
+                btn.innerText = "Adicionado!";
+                btn.style.backgroundColor = "#46d369";
+                setTimeout(() => {
+                    btn.innerText = originalText;
+                    btn.style.backgroundColor = "";
+                }, 1500);
+            },
+
+            deleteTransaction(id) {
+                if(confirm('Tem certeza que deseja excluir esta movimentação?')) {
+                    this.data.transactions = this.data.transactions.filter(t => t.id !== id);
+                    this.saveData();
+                    this.updateUI();
+                }
+            },
+
+            resetData() {
+                if(confirm('ATENÇÃO: Isso apagará todos os seus dados. Deseja continuar?')) {
+                    localStorage.removeItem('netfinance_transactions');
+                    this.data.transactions = [];
+                    this.updateUI();
+                }
+            },
+
+            exportToCSV() {
+                if (this.data.transactions.length === 0) {
+                    alert("Sem dados para exportar.");
+                    return;
+                }
+                let csvContent = "data:text/csv;charset=utf-8,";
+                csvContent += "Data,Descricao,Categoria,Tipo,Valor\n";
+                
+                this.data.transactions.forEach(t => {
+                    csvContent += `${t.date},${t.desc},${t.category},${t.type},${t.amount.toFixed(2)}\n`;
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "netfinance_dados.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            },
+
+            updateUI() {
+                this.renderDashboard();
+                this.renderHistory();
+                this.renderCharts();
+                this.renderBudgets();
+            },
+
+            renderDashboard() {
+                const income = this.data.transactions
+                    .filter(t => t.type === 'income')
+                    .reduce((acc, t) => acc + t.amount, 0);
+                
+                const expense = this.data.transactions
+                    .filter(t => t.type === 'expense')
+                    .reduce((acc, t) => acc + t.amount, 0);
+                
+                const total = income - expense;
+                
+                // Taxa de Economia
+                const savingsRate = income > 0 ? ((income - expense) / income) * 100 : 0;
+
+                // Atualizar DOM com animação numérica simples
+                document.getElementById('display-balance').innerText = this.data.currencyFormatter.format(total);
+                document.getElementById('display-income').innerText = this.data.currencyFormatter.format(income);
+                document.getElementById('display-expense').innerText = this.data.currencyFormatter.format(expense);
+                
+                const savingsEl = document.getElementById('display-savings-rate');
+                savingsEl.innerText = savingsRate.toFixed(1) + '%';
+                
+                // Colorir saldo
+                if(total < 0) document.getElementById('display-balance').classList.replace('text-white', 'text-red-500');
+                else document.getElementById('display-balance').classList.replace('text-red-500', 'text-white');
+                
+                // Colorir savings
+                if(savingsRate < 0) savingsEl.className = "text-2xl font-bold mt-2 text-red-500";
+                else if (savingsRate < 20) savingsEl.className = "text-2xl font-bold mt-2 text-yellow-500";
+                else savingsEl.className = "text-2xl font-bold mt-2 text-blue-400";
+            },
+
+            renderHistory() {
+                const list = document.getElementById('transactions-list');
+                const filter = document.getElementById('filter-category').value;
+                const emptyState = document.getElementById('empty-state');
+                
+                list.innerHTML = '';
+
+                // Filtrar e Ordenar (Data mais recente primeiro)
+                let filtered = this.data.transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (filter !== 'all') {
+                    filtered = filtered.filter(t => t.category === filter);
+                }
+
+                if (filtered.length === 0) {
+                    emptyState.classList.remove('hidden');
+                    return;
+                } else {
+                    emptyState.classList.add('hidden');
+                }
+
+                filtered.forEach(t => {
+                    const row = document.createElement('tr');
+                    row.className = 'table-row animate-fade-in';
+                    const isExpense = t.type === 'expense';
+                    const colorClass = isExpense ? 'text-red-500' : 'text-green-500';
+                    const sign = isExpense ? '- ' : '+ ';
+
+                    // Formatar data para PT-BR
+                    const dateObj = new Date(t.date);
+                    const dateFormatted = dateObj.toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+
+                    row.innerHTML = `
+                        <td class="p-3 text-gray-400">${dateFormatted}</td>
+                        <td class="p-3 font-medium text-white">${t.desc}</td>
+                        <td class="p-3"><span class="px-2 py-1 bg-gray-800 rounded text-xs text-gray-300 border border-gray-700">${t.category}</span></td>
+                        <td class="p-3 text-right font-bold ${colorClass}">${sign}${this.data.currencyFormatter.format(t.amount)}</td>
+                        <td class="p-3 text-center">
+                            <button onclick="app.deleteTransaction(${t.id})" class="text-gray-500 hover:text-red-500 transition">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    `;
+                    list.appendChild(row);
+                });
+            },
+
+            renderBudgets() {
+                const container = document.getElementById('budget-bars');
+                container.innerHTML = '';
+
+                // Agrupar despesas por categoria
+                const expensesByCategory = {};
+                this.data.transactions.filter(t => t.type === 'expense').forEach(t => {
+                    expensesByCategory[t.category] = (expensesByCategory[t.category] || 0) + t.amount;
+                });
+
+                // Top 3 categorias de gastos
+                const sortedCategories = Object.keys(expensesByCategory)
+                    .sort((a, b) => expensesByCategory[b] - expensesByCategory[a])
+                    .slice(0, 4);
+
+                if (sortedCategories.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-sm">Sem despesas registradas.</p>';
+                    return;
+                }
+
+                sortedCategories.forEach(cat => {
+                    const amount = expensesByCategory[cat];
+                    // Simulando um limite (no app real o usuário definiria)
+                    // Vamos assumir que o limite é 2x a média ou um valor fixo base para visualização
+                    const limit = amount * 1.5; 
+                    const percent = Math.min((amount / limit) * 100, 100);
+                    
+                    let barColor = 'bg-blue-600';
+                    if(percent > 80) barColor = 'bg-[#E50914]';
+                    else if(percent > 50) barColor = 'bg-yellow-500';
+
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-300">${cat}</span>
+                            <span class="text-gray-400 font-mono">${this.data.currencyFormatter.format(amount)}</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2.5">
+                            <div class="${barColor} h-2.5 rounded-full" style="width: ${percent}%"></div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            },
+
+            renderCharts() {
+                // Configuração comum para Charts (Estilo Dark)
+                Chart.defaults.color = '#9ca3af';
+                Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+                // 1. Gráfico de Pizza (Categorias de Despesa)
+                const expenses = this.data.transactions.filter(t => t.type === 'expense');
+                const categories = {};
+                expenses.forEach(t => {
+                    categories[t.category] = (categories[t.category] || 0) + t.amount;
+                });
+
+                const ctxPie = document.getElementById('pieChart').getContext('2d');
+                if (this.data.charts.pie) this.data.charts.pie.destroy();
+
+                this.data.charts.pie = new Chart(ctxPie, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(categories),
+                        datasets: [{
+                            data: Object.values(categories),
+                            backgroundColor: [
+                                '#E50914', '#b20710', '#fca5a5', '#991b1b', '#ef4444', '#7f1d1d'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'right', labels: { boxWidth: 10 } }
+                        }
+                    }
+                });
+
+                // 2. Gráfico de Linha (Evolução Mensal - Receita x Despesa)
+                // Agrupar por Mês/Ano
+                const monthsData = {};
+                this.data.transactions.forEach(t => {
+                    const date = new Date(t.date);
+                    const key = `${date.getMonth() + 1}/${date.getFullYear()}`; // Mês/Ano
+                    if(!monthsData[key]) monthsData[key] = { income: 0, expense: 0, sortKey: date.getTime() };
+                    
+                    if(t.type === 'income') monthsData[key].income += t.amount;
+                    else monthsData[key].expense += t.amount;
+                });
+
+                // Ordenar cronologicamente e pegar últimos 6
+                const sortedKeys = Object.keys(monthsData).sort((a, b) => {
+                   const [m1, y1] = a.split('/');
+                   const [m2, y2] = b.split('/');
+                   return new Date(y1, m1-1) - new Date(y2, m2-1);
+                }).slice(-6);
+
+                const labels = sortedKeys;
+                const dataIncome = sortedKeys.map(k => monthsData[k].income);
+                const dataExpense = sortedKeys.map(k => monthsData[k].expense);
+
+                const ctxLine = document.getElementById('lineChart').getContext('2d');
+                if (this.data.charts.line) this.data.charts.line.destroy();
+
+                this.data.charts.line = new Chart(ctxLine, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Receitas',
+                                data: dataIncome,
+                                backgroundColor: '#46d369',
+                                borderRadius: 4
+                            },
+                            {
+                                label: 'Despesas',
+                                data: dataExpense,
+                                backgroundColor: '#E50914',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+        };
+
+        // Inicializar App quando o DOM carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+
+    </script>
+</body>
+</html>
