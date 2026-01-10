@@ -1,1 +1,1041 @@
-# controle-financeiro
+# controle-financeiro[Uploading index.html…]()
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>NetFinance | Controle Financeiro Pro</title>
+    
+    <!-- Configurações PWA -->
+    <meta name="theme-color" content="#141414">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="NetFinance">
+    <link rel="manifest" href='data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22NetFinance%20Pro%22%2C%22short_name%22%3A%22NetFinance%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23141414%22%2C%22theme_color%22%3A%22%23E50914%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22https%3A%2F%2Fcdn-icons-png.flaticon.com%2F512%2F10543%2F10543265.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%2Fpng%22%7D%5D%7D'>
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/10543/10543265.png">
+
+    <!-- Bibliotecas Externas -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Variáveis e Reset */
+        :root {
+            --bg-color: #141414;
+            --card-bg: rgba(30, 30, 30, 0.7);
+            --primary-red: #E50914;
+            --hover-red: #b2070f;
+            --accent-green: #46d369;
+            --accent-yellow: #f59e0b;
+            --text-main: #ffffff;
+            --glass-border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            overflow-x: hidden;
+            overscroll-behavior-y: none;
+        }
+
+        .safe-area-pt { padding-top: env(safe-area-inset-top); }
+
+        /* Componentes Visuais */
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: var(--glass-border);
+            border-radius: 8px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+
+        .glass-panel:hover { border-color: rgba(255, 255, 255, 0.3); }
+
+        .netflix-input {
+            background-color: #333;
+            border: 1px solid transparent;
+            color: white;
+            padding: 10px 14px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        .netflix-input:focus {
+            background-color: #454545;
+            border-color: #fff;
+            outline: none;
+        }
+
+        .btn-netflix {
+            background-color: var(--primary-red);
+            color: white;
+            font-weight: bold;
+            border-radius: 4px;
+            transition: background 0.3s, transform 0.1s;
+        }
+        .btn-netflix:hover { background-color: var(--hover-red); }
+        .btn-netflix:active { transform: scale(0.98); }
+
+        .btn-secondary {
+            background-color: rgba(255,255,255,0.2);
+            color: white;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+        .btn-secondary:hover { background-color: rgba(255,255,255,0.3); }
+
+        /* Animações e Utilitários */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .toast-enter { animation: slideInRight 0.4s ease-out forwards; }
+
+        .chart-container { position: relative; height: 250px; width: 100%; }
+        
+        /* Modal Backdrop */
+        .modal-backdrop {
+            background-color: rgba(0,0,0,0.85);
+            backdrop-filter: blur(5px);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col safe-area-pt">
+
+    <!-- Toast Container (Notificações) -->
+    <div id="toast-container" class="fixed top-20 right-4 z-[100] flex flex-col gap-2"></div>
+
+    <!-- Navegação -->
+    <nav class="fixed w-full z-50 bg-black/90 backdrop-blur-md border-b border-white/10 top-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-chart-line text-[#E50914] text-2xl"></i>
+                    <span class="text-xl sm:text-2xl font-bold text-[#E50914] tracking-tighter">NETFINANCE</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="app.showInstallHelp()" class="hidden md:flex text-sm text-gray-300 hover:text-white items-center gap-2 bg-white/10 px-3 py-1.5 rounded-full transition">
+                        <i class="fas fa-download"></i> App
+                    </button>
+                    <button onclick="app.exportToCSV()" class="text-gray-300 hover:text-white transition p-2" title="Exportar">
+                        <i class="fas fa-file-export"></i>
+                    </button>
+                    <button onclick="app.resetData()" class="text-gray-300 hover:text-red-500 transition p-2" title="Resetar">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        
+        <!-- Header / Frase -->
+        <div class="mb-8 animate-fade-in mt-2 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <h1 class="text-3xl sm:text-4xl font-bold text-white mb-1">Painel Financeiro</h1>
+                <p id="motivational-quote" class="text-gray-400 text-sm italic"></p>
+            </div>
+            
+            <!-- Botão de Recorrentes (Aparece se houver pendências) -->
+            <button id="btn-check-recurring" onclick="app.checkRecurringExpenses(true)" class="hidden items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-lg animate-pulse">
+                <i class="fas fa-sync-alt"></i> Lançar Recorrentes
+            </button>
+        </div>
+
+        <!-- Dashboard Cards (KPIs) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10 animate-fade-in" style="animation-delay: 0.1s;">
+            <!-- Saldo -->
+            <div class="glass-panel p-6 relative overflow-hidden group">
+                <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                    <i class="fas fa-wallet fa-4x text-white"></i>
+                </div>
+                <p class="text-gray-400 text-xs uppercase tracking-wider font-semibold">Saldo Atual</p>
+                <h2 id="display-balance" class="text-3xl font-bold mt-2 text-white">R$ 0,00</h2>
+            </div>
+            <!-- Receitas -->
+            <div class="glass-panel p-6">
+                <div class="flex justify-between"><p class="text-gray-400 text-xs uppercase font-bold">Receitas</p><i class="fas fa-arrow-up text-[#46d369]"></i></div>
+                <h2 id="display-income" class="text-2xl font-bold mt-2 text-[#46d369]">R$ 0,00</h2>
+            </div>
+            <!-- Despesas -->
+            <div class="glass-panel p-6">
+                <div class="flex justify-between"><p class="text-gray-400 text-xs uppercase font-bold">Despesas</p><i class="fas fa-arrow-down text-[#E50914]"></i></div>
+                <h2 id="display-expense" class="text-2xl font-bold mt-2 text-[#E50914]">R$ 0,00</h2>
+            </div>
+            <!-- Economia -->
+            <div class="glass-panel p-6">
+                <p class="text-gray-400 text-xs uppercase font-bold">Economia</p>
+                <h2 id="display-savings-rate" class="text-2xl font-bold mt-2 text-blue-400">0%</h2>
+            </div>
+        </div>
+
+        <!-- Layout Grid: Form, Metas e Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10">
+            
+            <!-- Coluna Esquerda (4 colunas): Form e Orçamento -->
+            <div class="lg:col-span-4 space-y-8 animate-fade-in" style="animation-delay: 0.2s;">
+                
+                <!-- Formulário de Adição/Edição -->
+                <div class="glass-panel p-6">
+                    <h3 class="text-xl font-bold mb-4 flex items-center justify-between">
+                        <span id="form-title"><i class="fas fa-plus-circle text-[#E50914]"></i> Nova Movimentação</span>
+                        <button id="cancel-edit-btn" onclick="app.cancelEdit()" class="hidden text-xs text-gray-400 hover:text-white">Cancelar</button>
+                    </h3>
+                    
+                    <form id="transaction-form" class="space-y-4">
+                        <input type="hidden" id="edit-id" value="">
+                        
+                        <!-- Toggle Tipo -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="expense" class="peer sr-only" checked onchange="app.updateCategoryOptions()">
+                                <div class="p-3 text-center border border-gray-600 rounded-md peer-checked:bg-[#E50914] peer-checked:border-[#E50914] peer-checked:text-white text-gray-400 transition-all hover:bg-gray-800">Despesa</div>
+                            </label>
+                            <label class="cursor-pointer">
+                                <input type="radio" name="type" value="income" class="peer sr-only" onchange="app.updateCategoryOptions()">
+                                <div class="p-3 text-center border border-gray-600 rounded-md peer-checked:bg-[#46d369] peer-checked:border-[#46d369] peer-checked:text-white text-gray-400 transition-all hover:bg-gray-800">Receita</div>
+                            </label>
+                        </div>
+
+                        <input type="text" id="desc" placeholder="Descrição (ex: Aluguel)" class="netflix-input w-full" required>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" id="amount" placeholder="Valor (R$)" step="0.01" class="netflix-input w-full" required>
+                            <input type="date" id="date" class="netflix-input w-full text-gray-400" required>
+                        </div>
+
+                        <select id="category" class="netflix-input w-full cursor-pointer appearance-none">
+                            <!-- Opções preenchidas via JS -->
+                        </select>
+
+                        <!-- Toggle Recorrente -->
+                        <div class="flex items-center gap-2 mt-2">
+                            <input type="checkbox" id="is-recurring" class="w-4 h-4 rounded bg-gray-700 border-gray-600 text-red-600 focus:ring-red-500">
+                            <label for="is-recurring" class="text-sm text-gray-300">Despesa Recorrente (Mensal)</label>
+                        </div>
+
+                        <button type="submit" id="submit-btn" class="btn-netflix w-full py-3 text-lg shadow-lg">Adicionar</button>
+                    </form>
+                </div>
+
+                <!-- Orçamento Real -->
+                <div class="glass-panel p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold">Orçamento Mensal</h3>
+                        <button onclick="app.openBudgetModal()" class="text-xs text-blue-400 hover:text-white hover:underline">Definir Orçamento</button>
+                    </div>
+                    <div id="budget-bars" class="space-y-4 max-h-[300px] overflow-y-auto pr-2">
+                        <!-- Barras de progresso aqui -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna Direita (8 colunas): Gráficos e Metas -->
+            <div class="lg:col-span-8 space-y-8 animate-fade-in" style="animation-delay: 0.3s;">
+                
+                <!-- Seção de Metas -->
+                <div class="glass-panel p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-200"><i class="fas fa-bullseye text-[#E50914] mr-2"></i>Metas Financeiras</h3>
+                        <button onclick="app.openGoalModal()" class="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1 rounded text-sm"><i class="fas fa-plus"></i> Nova Meta</button>
+                    </div>
+                    <div id="goals-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Cards de Metas renderizados aqui -->
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass-panel p-6">
+                        <h3 class="text-sm font-bold mb-4 text-gray-400 uppercase">Fluxo de Caixa (6 Meses)</h3>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="lineChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="glass-panel p-6">
+                        <h3 class="text-sm font-bold mb-4 text-gray-400 uppercase">Distribuição de Gastos</h3>
+                        <div class="chart-container" style="height: 200px;">
+                            <canvas id="pieChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Histórico e Filtros -->
+        <div class="glass-panel p-6 animate-fade-in" style="animation-delay: 0.4s;">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
+                <h3 class="text-xl font-bold">Histórico de Transações</h3>
+                
+                <!-- Filtros Complexos -->
+                <div class="flex flex-wrap gap-2 w-full lg:w-auto">
+                    <!-- Filtro Período -->
+                    <select id="filter-period" class="netflix-input py-2 px-3 text-sm flex-1 lg:flex-none" onchange="app.handlePeriodChange()">
+                        <option value="month">Este Mês</option>
+                        <option value="30days">Últimos 30 dias</option>
+                        <option value="year">Ano Atual</option>
+                        <option value="all">Todo o Período</option>
+                        <option value="custom">Personalizado...</option>
+                    </select>
+                    
+                    <!-- Datas Personalizadas (Hidden por padrão) -->
+                    <div id="custom-date-range" class="hidden flex gap-2">
+                        <input type="date" id="filter-start" class="netflix-input py-2 px-2 text-sm text-gray-400" onchange="app.renderHistory()">
+                        <input type="date" id="filter-end" class="netflix-input py-2 px-2 text-sm text-gray-400" onchange="app.renderHistory()">
+                    </div>
+
+                    <!-- Filtro Categoria -->
+                    <select id="filter-category" class="netflix-input py-2 px-3 text-sm flex-1 lg:flex-none" onchange="app.renderHistory()">
+                        <option value="all">Todas as Categorias</option>
+                        <optgroup label="Despesas" id="filter-opt-expenses"></optgroup>
+                        <optgroup label="Receitas" id="filter-opt-incomes"></optgroup>
+                    </select>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-gray-400 border-b border-gray-700 text-xs uppercase tracking-wider">
+                            <th class="p-3">Data</th>
+                            <th class="p-3">Descrição</th>
+                            <th class="p-3">Categoria</th>
+                            <th class="p-3 text-right">Valor</th>
+                            <th class="p-3 text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="transactions-list" class="text-sm text-gray-200">
+                        <!-- Linhas serão injetadas via JS -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="empty-state" class="hidden py-10 text-center text-gray-500">
+                <i class="fas fa-ghost text-4xl mb-3 opacity-50"></i>
+                <p>Nenhuma transação encontrada neste período.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- ================= MODAIS ================= -->
+
+    <!-- Modal Orçamento -->
+    <div id="budget-modal" class="fixed inset-0 modal-backdrop z-[60] hidden items-center justify-center p-4">
+        <div class="glass-panel p-6 w-full max-w-lg bg-[#1e1e1e]">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold">Definir Orçamentos (Teto de Gastos)</h3>
+                <button onclick="app.closeModal('budget-modal')" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="budget-form-container" class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+                <!-- Inputs gerados via JS -->
+            </div>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="app.closeModal('budget-modal')" class="text-gray-400 hover:text-white px-4 py-2">Cancelar</button>
+                <button onclick="app.saveBudgets()" class="btn-netflix px-6 py-2">Salvar Orçamentos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Metas -->
+    <div id="goal-modal" class="fixed inset-0 modal-backdrop z-[60] hidden items-center justify-center p-4">
+        <div class="glass-panel p-6 w-full max-w-md bg-[#1e1e1e]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold" id="goal-modal-title">Nova Meta</h3>
+                <button onclick="app.closeModal('goal-modal')" class="text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="goal-form" onsubmit="event.preventDefault(); app.saveGoal();" class="space-y-4">
+                <input type="hidden" id="goal-id">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1">Nome da Meta</label>
+                    <input type="text" id="goal-name" placeholder="Ex: Viagem Japão" class="netflix-input w-full" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Valor Alvo (R$)</label>
+                        <input type="number" id="goal-target" placeholder="10000" step="0.01" class="netflix-input w-full" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Guardado Atual (R$)</label>
+                        <input type="number" id="goal-current" placeholder="0" step="0.01" class="netflix-input w-full" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn-netflix w-full py-3">Salvar Meta</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Instalação (PWA) -->
+    <div id="install-modal" class="fixed inset-0 modal-backdrop z-[100] hidden items-center justify-center p-4">
+        <div class="bg-[#1e1e1e] border border-gray-700 rounded-lg p-6 max-w-md w-full relative shadow-2xl">
+            <button onclick="app.closeModal('install-modal')" class="absolute top-4 right-4 text-gray-400 hover:text-white"><i class="fas fa-times"></i></button>
+            <div class="text-center mb-6">
+                <i class="fas fa-mobile-alt text-4xl text-[#E50914] mb-3"></i>
+                <h3 class="text-xl font-bold text-white">Instalar App</h3>
+                <p class="text-gray-400 text-sm mt-2">Tenha a melhor experiência adicionando à tela inicial.</p>
+            </div>
+            <div class="space-y-4 text-sm text-gray-300">
+                <div class="flex items-start gap-3 p-3 bg-black/30 rounded">
+                    <i class="fab fa-apple text-xl"></i>
+                    <div><strong class="text-white block">iOS (Safari)</strong>Botão Compartilhar <i class="fas fa-share-square"></i> > Adicionar à Tela de Início</div>
+                </div>
+                <div class="flex items-start gap-3 p-3 bg-black/30 rounded">
+                    <i class="fab fa-android text-xl"></i>
+                    <div><strong class="text-white block">Android (Chrome)</strong>Menu (três pontos) > Adicionar à tela inicial</div>
+                </div>
+            </div>
+            <button onclick="app.closeModal('install-modal')" class="mt-6 w-full btn-netflix py-2">Entendi</button>
+        </div>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        const app = {
+            data: {
+                transactions: [],
+                budgets: {}, // { "Alimentação": 800, "Lazer": 300 }
+                goals: [], // [ { id, name, target, current } ]
+                recurring: [], // [ { id, desc, amount, category, type, day } ]
+                currencyFormatter: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }),
+                charts: { pie: null, line: null },
+                categories: {
+                    expense: ["Alimentação", "Moradia", "Transporte", "Lazer", "Saúde", "Educação", "Assinaturas", "Outros"],
+                    income: ["Salário", "Investimentos", "Freelance", "Presentes", "Outros"]
+                },
+                editingId: null
+            },
+
+            quotes: [
+                "“Jamais gaste seu dinheiro antes de possuí-lo.” – Thomas Jefferson",
+                "“O preço de qualquer coisa é a quantidade de vida que você troca por isso.” – Thoreau",
+                "“Controle seu dinheiro ou ele controlará você.”",
+                "“Não economize o que sobra depois de gastar, mas gaste o que sobra depois de economizar.”"
+            ],
+
+            init() {
+                // Carregar LocalStorage
+                this.loadData();
+                
+                // Configuração inicial UI
+                document.getElementById('date').valueAsDate = new Date();
+                document.getElementById('motivational-quote').innerText = this.quotes[Math.floor(Math.random() * this.quotes.length)];
+                
+                // Event Listeners
+                document.getElementById('transaction-form').addEventListener('submit', (e) => { e.preventDefault(); this.handleFormSubmit(); });
+                
+                // Renderização Inicial
+                this.updateCategoryOptions();
+                this.updateUI();
+                
+                // Verificações
+                this.checkRecurringExpenses(false); // Check silencioso ao iniciar
+            },
+
+            loadData() {
+                const tx = localStorage.getItem('netfinance_transactions');
+                const bd = localStorage.getItem('netfinance_budgets');
+                const gl = localStorage.getItem('netfinance_goals');
+                const rc = localStorage.getItem('netfinance_recurring');
+
+                if(tx) this.data.transactions = JSON.parse(tx);
+                if(bd) this.data.budgets = JSON.parse(bd);
+                if(gl) this.data.goals = JSON.parse(gl);
+                if(rc) this.data.recurring = JSON.parse(rc);
+
+                // Populate filter options correctly
+                this.populateFilterOptions();
+            },
+
+            saveData() {
+                localStorage.setItem('netfinance_transactions', JSON.stringify(this.data.transactions));
+                localStorage.setItem('netfinance_budgets', JSON.stringify(this.data.budgets));
+                localStorage.setItem('netfinance_goals', JSON.stringify(this.data.goals));
+                localStorage.setItem('netfinance_recurring', JSON.stringify(this.data.recurring));
+            },
+
+            // --- TOAST NOTIFICATIONS ---
+            showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toast = document.createElement('div');
+                
+                let icon = type === 'success' ? '<i class="fas fa-check-circle text-green-500"></i>' : 
+                           type === 'error' ? '<i class="fas fa-exclamation-circle text-red-500"></i>' : 
+                           '<i class="fas fa-info-circle text-blue-500"></i>';
+                
+                let borderColor = type === 'success' ? 'border-l-4 border-green-500' : 
+                                  type === 'error' ? 'border-l-4 border-red-500' : 'border-l-4 border-blue-500';
+
+                toast.className = `glass-panel p-4 flex items-center gap-3 min-w-[300px] toast-enter ${borderColor}`;
+                toast.innerHTML = `
+                    <div class="text-lg">${icon}</div>
+                    <div class="text-sm font-semibold text-white">${message}</div>
+                `;
+
+                container.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateX(100%)';
+                    setTimeout(() => toast.remove(), 300);
+                }, 3000);
+            },
+
+            // --- FORM HANDLING (ADD & EDIT) ---
+            updateCategoryOptions() {
+                const type = document.querySelector('input[name="type"]:checked').value;
+                const select = document.getElementById('category');
+                select.innerHTML = '';
+                
+                this.data.categories[type].forEach(cat => {
+                    const option = document.createElement('option');
+                    option.value = cat;
+                    option.innerText = cat;
+                    select.appendChild(option);
+                });
+            },
+
+            populateFilterOptions() {
+                const expGroup = document.getElementById('filter-opt-expenses');
+                const incGroup = document.getElementById('filter-opt-incomes');
+                expGroup.innerHTML = '';
+                incGroup.innerHTML = '';
+
+                this.data.categories.expense.forEach(c => expGroup.innerHTML += `<option value="${c}">${c}</option>`);
+                this.data.categories.income.forEach(c => incGroup.innerHTML += `<option value="${c}">${c}</option>`);
+            },
+
+            handleFormSubmit() {
+                const id = this.data.editingId || Date.now();
+                const desc = document.getElementById('desc').value;
+                const amount = parseFloat(document.getElementById('amount').value);
+                const date = document.getElementById('date').value;
+                const category = document.getElementById('category').value;
+                const type = document.querySelector('input[name="type"]:checked').value;
+                const isRecurring = document.getElementById('is-recurring').checked;
+
+                if (!desc || isNaN(amount) || amount <= 0 || !date) {
+                    this.showToast("Preencha todos os campos!", "error");
+                    return;
+                }
+
+                const transaction = { id, desc, amount, date, category, type };
+
+                if (this.data.editingId) {
+                    // Update existing
+                    const index = this.data.transactions.findIndex(t => t.id === this.data.editingId);
+                    if (index !== -1) this.data.transactions[index] = transaction;
+                    this.showToast("Transação atualizada!", "success");
+                    this.cancelEdit();
+                } else {
+                    // Add new
+                    this.data.transactions.push(transaction);
+                    this.showToast("Transação adicionada!", "success");
+                    
+                    // Handle Recurring
+                    if(isRecurring && type === 'expense') {
+                        this.addRecurringTemplate(desc, amount, category, date);
+                    }
+                }
+
+                this.saveData();
+                this.updateUI();
+                
+                if (!this.data.editingId) {
+                    document.getElementById('desc').value = '';
+                    document.getElementById('amount').value = '';
+                    document.getElementById('is-recurring').checked = false;
+                }
+            },
+
+            editTransaction(id) {
+                const t = this.data.transactions.find(x => x.id === id);
+                if(!t) return;
+
+                this.data.editingId = id;
+                
+                // Populate Form
+                document.querySelector(`input[name="type"][value="${t.type}"]`).checked = true;
+                this.updateCategoryOptions();
+                document.getElementById('category').value = t.category;
+                document.getElementById('desc').value = t.desc;
+                document.getElementById('amount').value = t.amount;
+                document.getElementById('date').value = t.date;
+                
+                // Change UI state
+                document.getElementById('form-title').innerHTML = '<i class="fas fa-pencil-alt text-yellow-500"></i> Editar Movimentação';
+                document.getElementById('submit-btn').innerText = "Atualizar Transação";
+                document.getElementById('submit-btn').classList.replace('btn-netflix', 'bg-yellow-600');
+                document.getElementById('cancel-edit-btn').classList.remove('hidden');
+                
+                // Scroll to top
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            },
+
+            cancelEdit() {
+                this.data.editingId = null;
+                document.getElementById('transaction-form').reset();
+                document.getElementById('date').valueAsDate = new Date();
+                
+                // Reset UI
+                document.getElementById('form-title').innerHTML = '<i class="fas fa-plus-circle text-[#E50914]"></i> Nova Movimentação';
+                document.getElementById('submit-btn').innerText = "Adicionar";
+                document.getElementById('submit-btn').classList.replace('bg-yellow-600', 'btn-netflix');
+                document.getElementById('cancel-edit-btn').classList.add('hidden');
+                this.updateCategoryOptions();
+            },
+
+            deleteTransaction(id) {
+                if(confirm('Excluir esta transação?')) {
+                    this.data.transactions = this.data.transactions.filter(t => t.id !== id);
+                    this.saveData();
+                    this.updateUI();
+                    this.showToast("Transação removida.", "info");
+                }
+            },
+
+            // --- RECURRING EXPENSES ---
+            addRecurringTemplate(desc, amount, category, dateStr) {
+                // Check if already exists to avoid duplicates
+                const exists = this.data.recurring.some(r => r.desc === desc && r.amount === amount);
+                if(!exists) {
+                    const day = new Date(dateStr).getDate();
+                    this.data.recurring.push({ id: Date.now(), desc, amount, category, day });
+                    this.showToast("Adicionado às despesas recorrentes!", "info");
+                }
+            },
+
+            checkRecurringExpenses(forceShow) {
+                const today = new Date();
+                const currentMonth = today.getMonth();
+                const currentYear = today.getFullYear();
+                
+                const pending = this.data.recurring.filter(rec => {
+                    // Check if a transaction exists for this recurring item in current month/year
+                    const hasTransaction = this.data.transactions.some(t => {
+                        const tDate = new Date(t.date);
+                        return t.desc === rec.desc && 
+                               t.amount === rec.amount && 
+                               tDate.getMonth() === currentMonth && 
+                               tDate.getFullYear() === currentYear;
+                    });
+                    return !hasTransaction;
+                });
+
+                const btn = document.getElementById('btn-check-recurring');
+                
+                if(pending.length > 0) {
+                    btn.classList.remove('hidden');
+                    btn.classList.add('flex');
+                    btn.innerHTML = `<i class="fas fa-bell animate-bounce"></i> ${pending.length} Contas Recorrentes Pendentes`;
+                    
+                    if(forceShow) {
+                        if(confirm(`Você tem ${pending.length} contas recorrentes (ex: ${pending[0].desc}) que ainda não foram lançadas este mês. Deseja lançar todas agora?`)) {
+                            pending.forEach(rec => {
+                                // Create date for current month
+                                const d = new Date(currentYear, currentMonth, rec.day);
+                                const dateStr = d.toISOString().split('T')[0];
+                                this.data.transactions.push({
+                                    id: Date.now() + Math.random(),
+                                    desc: rec.desc,
+                                    amount: rec.amount,
+                                    category: rec.category,
+                                    type: 'expense',
+                                    date: dateStr
+                                });
+                            });
+                            this.saveData();
+                            this.updateUI();
+                            this.showToast("Contas recorrentes lançadas!", "success");
+                            btn.classList.add('hidden');
+                        }
+                    }
+                } else {
+                    btn.classList.add('hidden');
+                    if(forceShow) this.showToast("Todas as contas recorrentes estão em dia!", "success");
+                }
+            },
+
+            // --- FILTERS & HISTORY ---
+            handlePeriodChange() {
+                const period = document.getElementById('filter-period').value;
+                const customRange = document.getElementById('custom-date-range');
+                if (period === 'custom') {
+                    customRange.classList.remove('hidden');
+                } else {
+                    customRange.classList.add('hidden');
+                }
+                this.renderHistory();
+            },
+
+            isDateInPeriod(dateStr, period) {
+                const d = new Date(dateStr);
+                const now = new Date();
+                const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
+                
+                if (period === 'month') {
+                    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+                } else if (period === 'year') {
+                    return d.getFullYear() === now.getFullYear();
+                } else if (period === '30days') {
+                    const thirtyDaysAgo = new Date();
+                    thirtyDaysAgo.setDate(now.getDate() - 30);
+                    return d >= thirtyDaysAgo && d <= now;
+                } else if (period === 'custom') {
+                    const startStr = document.getElementById('filter-start').value;
+                    const endStr = document.getElementById('filter-end').value;
+                    if(!startStr || !endStr) return true; // Show all if incomplete
+                    return d >= new Date(startStr) && d <= new Date(endStr);
+                }
+                return true;
+            },
+
+            renderHistory() {
+                const list = document.getElementById('transactions-list');
+                const catFilter = document.getElementById('filter-category').value;
+                const periodFilter = document.getElementById('filter-period').value;
+                const emptyState = document.getElementById('empty-state');
+                
+                list.innerHTML = '';
+
+                let filtered = this.data.transactions
+                    .filter(t => this.isDateInPeriod(t.date, periodFilter))
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                if (catFilter !== 'all') {
+                    filtered = filtered.filter(t => t.category === catFilter);
+                }
+
+                if (filtered.length === 0) {
+                    emptyState.classList.remove('hidden');
+                } else {
+                    emptyState.classList.add('hidden');
+                    filtered.forEach(t => {
+                        const row = document.createElement('tr');
+                        row.className = 'table-row animate-fade-in';
+                        const isExpense = t.type === 'expense';
+                        const colorClass = isExpense ? 'text-red-500' : 'text-green-500';
+                        const sign = isExpense ? '- ' : '+ ';
+                        const dateFormatted = new Date(t.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' });
+
+                        row.innerHTML = `
+                            <td class="p-3 text-gray-400 whitespace-nowrap">${dateFormatted}</td>
+                            <td class="p-3 font-medium text-white">${t.desc}</td>
+                            <td class="p-3"><span class="px-2 py-1 bg-gray-800 rounded text-xs text-gray-300 border border-gray-700 whitespace-nowrap">${t.category}</span></td>
+                            <td class="p-3 text-right font-bold ${colorClass}">${sign}${this.data.currencyFormatter.format(t.amount)}</td>
+                            <td class="p-3 text-center whitespace-nowrap">
+                                <button onclick="app.editTransaction(${t.id})" class="text-gray-400 hover:text-yellow-500 mr-3 transition" title="Editar">
+                                    <i class="fas fa-pencil-alt"></i>
+                                </button>
+                                <button onclick="app.deleteTransaction(${t.id})" class="text-gray-400 hover:text-red-500 transition" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        `;
+                        list.appendChild(row);
+                    });
+                }
+            },
+
+            // --- BUDGETS (ORÇAMENTO REAL) ---
+            openBudgetModal() {
+                const container = document.getElementById('budget-form-container');
+                container.innerHTML = '';
+                
+                this.data.categories.expense.forEach(cat => {
+                    const currentLimit = this.data.budgets[cat] || 0;
+                    const div = document.createElement('div');
+                    div.className = "flex items-center justify-between bg-black/30 p-2 rounded";
+                    div.innerHTML = `
+                        <label class="text-sm text-gray-300 w-1/3">${cat}</label>
+                        <input type="number" id="budget-${cat}" value="${currentLimit}" placeholder="0.00" class="netflix-input w-2/3 text-right">
+                    `;
+                    container.appendChild(div);
+                });
+                
+                this.openModal('budget-modal');
+            },
+
+            saveBudgets() {
+                this.data.categories.expense.forEach(cat => {
+                    const val = parseFloat(document.getElementById(`budget-${cat}`).value);
+                    if(!isNaN(val) && val > 0) {
+                        this.data.budgets[cat] = val;
+                    } else {
+                        delete this.data.budgets[cat];
+                    }
+                });
+                this.saveData();
+                this.updateUI();
+                this.closeModal('budget-modal');
+                this.showToast("Orçamentos atualizados!", "success");
+            },
+
+            renderBudgets() {
+                const container = document.getElementById('budget-bars');
+                container.innerHTML = '';
+
+                // Calculate spending current month
+                const currentMonthSpends = {};
+                const now = new Date();
+                
+                this.data.transactions.forEach(t => {
+                    const d = new Date(t.date);
+                    if(t.type === 'expense' && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+                        currentMonthSpends[t.category] = (currentMonthSpends[t.category] || 0) + t.amount;
+                    }
+                });
+
+                const activeBudgets = Object.keys(this.data.budgets);
+                
+                if (activeBudgets.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-sm italic">Nenhum orçamento definido. Clique acima para começar.</p>';
+                    return;
+                }
+
+                activeBudgets.forEach(cat => {
+                    const limit = this.data.budgets[cat];
+                    const spent = currentMonthSpends[cat] || 0;
+                    const percent = Math.min((spent / limit) * 100, 100);
+                    
+                    let color = 'bg-green-500';
+                    if (percent >= 100) color = 'bg-red-600';
+                    else if (percent >= 80) color = 'bg-yellow-500';
+
+                    const div = document.createElement('div');
+                    div.innerHTML = `
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="text-white font-semibold">${cat}</span>
+                            <span class="text-gray-400">${this.data.currencyFormatter.format(spent)} / ${this.data.currencyFormatter.format(limit)}</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-2">
+                            <div class="${color} h-2 rounded-full transition-all duration-500" style="width: ${percent}%"></div>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            },
+
+            // --- GOALS (METAS) ---
+            openGoalModal() {
+                document.getElementById('goal-form').reset();
+                document.getElementById('goal-modal-title').innerText = "Nova Meta";
+                this.openModal('goal-modal');
+            },
+
+            saveGoal() {
+                const name = document.getElementById('goal-name').value;
+                const target = parseFloat(document.getElementById('goal-target').value);
+                const current = parseFloat(document.getElementById('goal-current').value);
+                
+                if(!name || isNaN(target)) {
+                    this.showToast("Preencha os dados da meta.", "error");
+                    return;
+                }
+
+                this.data.goals.push({ id: Date.now(), name, target, current });
+                this.saveData();
+                this.renderGoals();
+                this.closeModal('goal-modal');
+                this.showToast("Meta criada com sucesso!", "success");
+            },
+
+            deleteGoal(id) {
+                if(confirm("Excluir esta meta?")) {
+                    this.data.goals = this.data.goals.filter(g => g.id !== id);
+                    this.saveData();
+                    this.renderGoals();
+                }
+            },
+
+            renderGoals() {
+                const container = document.getElementById('goals-container');
+                container.innerHTML = '';
+
+                if(this.data.goals.length === 0) {
+                    container.innerHTML = '<p class="col-span-3 text-gray-500 text-sm text-center">Nenhuma meta definida.</p>';
+                    return;
+                }
+
+                this.data.goals.forEach(g => {
+                    const percent = Math.min((g.current / g.target) * 100, 100).toFixed(1);
+                    const card = document.createElement('div');
+                    card.className = "bg-black/40 border border-gray-700 p-4 rounded hover:border-gray-500 transition relative group";
+                    card.innerHTML = `
+                        <button onclick="app.deleteGoal(${g.id})" class="absolute top-2 right-2 text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-trash"></i></button>
+                        <h4 class="font-bold text-white mb-2">${g.name}</h4>
+                        <div class="flex justify-between text-xs text-gray-400 mb-1">
+                            <span>${percent}%</span>
+                            <span>${this.data.currencyFormatter.format(g.current)} / ${this.data.currencyFormatter.format(g.target)}</span>
+                        </div>
+                        <div class="w-full bg-gray-700 rounded-full h-1.5">
+                            <div class="bg-blue-500 h-1.5 rounded-full" style="width: ${percent}%"></div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            },
+
+            // --- UTILS ---
+            updateUI() {
+                this.renderDashboard();
+                this.renderHistory();
+                this.renderCharts();
+                this.renderBudgets();
+                this.renderGoals();
+            },
+
+            renderDashboard() {
+                // Cálculo baseado no período selecionado ou total? Geralmente dashboard é mês atual ou total. 
+                // Vamos manter Dashboard como TOTAL ATUAL (Saldo Real) e Mês Atual para Income/Expense
+                const now = new Date();
+                
+                // Saldo é sempre global
+                const totalIncome = this.data.transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0);
+                const totalExpense = this.data.transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + t.amount, 0);
+                const balance = totalIncome - totalExpense;
+
+                // Receita/Despesa do Mês Atual
+                const monthIncome = this.data.transactions
+                    .filter(t => t.type === 'income' && new Date(t.date).getMonth() === now.getMonth() && new Date(t.date).getFullYear() === now.getFullYear())
+                    .reduce((acc, t) => acc + t.amount, 0);
+                
+                const monthExpense = this.data.transactions
+                    .filter(t => t.type === 'expense' && new Date(t.date).getMonth() === now.getMonth() && new Date(t.date).getFullYear() === now.getFullYear())
+                    .reduce((acc, t) => acc + t.amount, 0);
+
+                const savingsRate = monthIncome > 0 ? ((monthIncome - monthExpense) / monthIncome) * 100 : 0;
+
+                document.getElementById('display-balance').innerText = this.data.currencyFormatter.format(balance);
+                document.getElementById('display-income').innerText = this.data.currencyFormatter.format(monthIncome);
+                document.getElementById('display-expense').innerText = this.data.currencyFormatter.format(monthExpense);
+                
+                const savEl = document.getElementById('display-savings-rate');
+                savEl.innerText = savingsRate.toFixed(1) + '%';
+                
+                if(balance < 0) document.getElementById('display-balance').classList.replace('text-white', 'text-red-500');
+                else document.getElementById('display-balance').classList.replace('text-red-500', 'text-white');
+
+                savEl.className = `text-2xl font-bold mt-2 ${savingsRate < 0 ? 'text-red-500' : savingsRate < 20 ? 'text-yellow-500' : 'text-blue-400'}`;
+            },
+
+            renderCharts() {
+                // Configuração Dark
+                Chart.defaults.color = '#9ca3af';
+                Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+                // Pie Chart
+                const expenses = this.data.transactions.filter(t => t.type === 'expense' && this.isDateInPeriod(t.date, document.getElementById('filter-period').value));
+                const categories = {};
+                expenses.forEach(t => categories[t.category] = (categories[t.category] || 0) + t.amount);
+
+                if (this.data.charts.pie) this.data.charts.pie.destroy();
+                this.data.charts.pie = new Chart(document.getElementById('pieChart'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(categories),
+                        datasets: [{
+                            data: Object.values(categories),
+                            backgroundColor: ['#E50914', '#b20710', '#fca5a5', '#991b1b', '#ef4444', '#7f1d1d', '#4b5563', '#9ca3af'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10, font: {size: 10} } } } }
+                });
+
+                // Line Chart (Last 6 Months Fixed)
+                const monthsData = {};
+                const today = new Date();
+                for(let i=5; i>=0; i--) {
+                    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                    const key = `${d.getMonth()+1}/${d.getFullYear()}`;
+                    monthsData[key] = { income: 0, expense: 0, label: key };
+                }
+
+                this.data.transactions.forEach(t => {
+                    const d = new Date(t.date);
+                    const key = `${d.getMonth()+1}/${d.getFullYear()}`;
+                    if(monthsData[key]) {
+                        if(t.type === 'income') monthsData[key].income += t.amount;
+                        else monthsData[key].expense += t.amount;
+                    }
+                });
+
+                const labels = Object.keys(monthsData);
+                const incomes = labels.map(k => monthsData[k].income);
+                const expensesData = labels.map(k => monthsData[k].expense);
+
+                if (this.data.charts.line) this.data.charts.line.destroy();
+                this.data.charts.line = new Chart(document.getElementById('lineChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            { label: 'Receitas', data: incomes, backgroundColor: '#46d369', borderRadius: 4 },
+                            { label: 'Despesas', data: expensesData, backgroundColor: '#E50914', borderRadius: 4 }
+                        ]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false,
+                        scales: { x: { grid: { display: false } }, y: { beginAtZero: true } }
+                    }
+                });
+            },
+
+            exportToCSV() {
+                if (this.data.transactions.length === 0) return this.showToast("Sem dados para exportar.", "error");
+                
+                let csvContent = "data:text/csv;charset=utf-8,Data,Descricao,Categoria,Tipo,Valor\n";
+                this.data.transactions.forEach(t => {
+                    csvContent += `${t.date},${t.desc},${t.category},${t.type},${t.amount.toFixed(2)}\n`;
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "netfinance_dados.csv");
+                document.body.appendChild(link);
+                link.click();
+                this.showToast("Dados exportados para CSV!", "success");
+            },
+
+            resetData() {
+                if(confirm('ATENÇÃO: Isso apagará TODOS os dados. Continuar?')) {
+                    localStorage.clear();
+                    location.reload();
+                }
+            },
+
+            openModal(id) {
+                const el = document.getElementById(id);
+                el.classList.remove('hidden');
+                el.classList.add('flex');
+            },
+            closeModal(id) {
+                const el = document.getElementById(id);
+                el.classList.add('hidden');
+                el.classList.remove('flex');
+            },
+            showInstallHelp() { this.openModal('install-modal'); }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
